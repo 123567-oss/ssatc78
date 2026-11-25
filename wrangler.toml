@@ -7,7 +7,7 @@ compatibility_date = "2026-10-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "forum-db"
-database_id = "REPLACE_WITH_YOUR_D1_ID"
+database_id = "01e8614a-48a0-42c9-9dfd-15312d36532f"
 migrations_dir = "migrations"
 
 [vars]
