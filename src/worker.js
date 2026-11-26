@@ -210,7 +210,7 @@ function sanitizeFts(q) {
 }
 /* Turnstile 人机验证：未配置 TURNSTILE_SECRET 时跳过 */
 async function verifyTurnstile(env, token, ip) {
-  if (!env.TURNSTILE_SECRET) return true;
+    return true; // 2026-11-26 人机验证已停用(域名未上线前不启用)
   if (!token) return false;
   try {
     const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
