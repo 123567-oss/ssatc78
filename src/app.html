@@ -217,7 +217,7 @@ textarea{min-height:100px;resize:vertical}
 </div>
 <footer style="max-width:1100px;margin:0 auto;padding:20px 12px 40px;text-align:center;font-size:12px;color:var(--muted)">
   <div id="friend-links" style="margin-bottom:10px;line-height:2"></div>
-  <div id="footer-ad">'+''+'</div>
+  <div id="footer-ad"></div>
   <span style="cursor:pointer" onclick="navigate('/rules')">社区规范</span> ·
   <span style="cursor:pointer" onclick="navigate('/tools')">工具中心</span> ·
   <span id="foot-name">论坛</span> ·
@@ -310,7 +310,7 @@ function renderUserbar(){
   const themeBtn = '<button onclick="toggleTheme()" title="切换深色/浅色">'+(document.documentElement.dataset.theme==='dark'?'☀️':'🌙')+'</button>';
   if(me){
     ub.innerHTML = themeBtn+'<button onclick="showCheckin()" title="每日签到" id="checkin-btn">📅 签到</button>'+
-      '<span style="cursor:pointer;font-size:13px;white-space:nowrap" onclick="navigate(\'/shop\')" title="我的积分">⭐ '+(me.points||0)+'</span>'+
+      '<span style="cursor:pointer;font-size:13px;white-space:nowrap" onclick="navigate(\'/u/'+me.id+'\')" title="我的积分">⭐ '+(me.points||0)+'</span>'+
       '<span class="bell" onclick="navigate(\'/notifications\')" title="通知">🔔<span class="dot" id="notif-dot" style="display:none"></span></span>'+
       '<span class="bell" onclick="navigate(\'/dm\')" title="私信">✉️<span class="dot" id="dm-dot" style="display:none"></span></span>'+
       '<span style="position:relative;cursor:pointer;display:inline-flex;align-items:center;white-space:nowrap" id="uavatar">'+avatarHtml(me.avatar_url, me.name, '', me.avatar_frame)+
@@ -693,48 +693,23 @@ function showModal(html){
 function hideModal(){ document.getElementById('modal').classList.remove('show'); }
 document.getElementById('modal').onclick = e=>{ if(e.target.id==='modal') hideModal(); };
 
-/* Turnstile 人机验证 */
-let turnstileWidgetId = null;
-function turnstileSiteKey() { return ''; } /* 2026-11-26 人机验证已停用 */
-function renderTurnstile(containerId){
-  const key = turnstileSitekey();
-  if(!key) return;
-  const load = ()=>{
-    if(typeof turnstile === 'undefined'){ setTimeout(load, 300); return; }
-    try{ if(turnstileWidgetId !== null) turnstile.remove(turnstileWidgetId); }catch(e){}
-    turnstileWidgetId = turnstile.render('#'+containerId, { sitekey: key, theme: 'auto', language: 'zh-CN' });
-  };
-  if(typeof turnstile === 'undefined'){
-    const s = document.createElement('script');
-    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
-    s.async = true; s.defer = true;
-    s.onload = load;
-    document.head.appendChild(s);
-  } else load();
-}
-function getTurnstileToken(){
-  const key = turnstileSitekey();
-  if(!key) return '';
-  try{ return turnstile.getResponse(turnstileWidgetId) || ''; }catch(e){ return ''; }
-}
-function resetTurnstile(){
-  try{ if(turnstileWidgetId !== null) turnstile.reset(turnstileWidgetId); }catch(e){}
-}
-function turnstileDiv(){
-  return turnstileSitekey() ? '<div id="ts-widget" style="margin:8px 0;display:flex;justify-content:center"></div>' : '';
+function bindEnter(ids, fn){
+  ids.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); fn(); } });
+  });
 }
 function showLogin(){
   showModal('<h3>登录</h3><div class="err" id="m-err"></div>'+
     '<input type="text" id="m-name" placeholder="用户名" autocomplete="username">'+
     '<input type="password" id="m-pass" placeholder="密码" autocomplete="current-password">'+
-    turnstileDiv()+
     '<div class="row"><button class="btn ghost" onclick="hideModal()">取消</button><button class="btn" onclick="doLogin()">登录</button></div>'+
     (siteSettings.github_oauth ? '<div style="text-align:center;margin:12px 0 4px;color:var(--muted);font-size:12px">— 或 —</div>'+
     '<button class="btn ghost" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px" onclick="location.href=\'/api/auth/github\'">'+
     '<svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>'+
     '使用 GitHub 登录</button>' : '')+
     '<div style="text-align:center;margin-top:10px"><a style="font-size:13px;color:var(--primary);cursor:pointer" onclick="showForgot()">忘记密码？</a></div>');
-  renderTurnstile('ts-widget');
+  bindEnter(['m-name','m-pass'], doLogin);
 }
 function showForgot(){
   showModal('<h3>找回密码</h3><div class="err" id="m-err"></div>'+
@@ -753,7 +728,8 @@ async function doForgot(){
 async function doLogin(){
   const name = document.getElementById('m-name').value.trim();
   const pass = document.getElementById('m-pass').value;
-  try{ await api('/api/login',{method:'POST',body:JSON.stringify({name,password:pass,turnstile_token:getTurnstileToken()})}); resetTurnstile(); hideModal(); await refreshMe(); route(); }
+  if(!name || !pass){ document.getElementById('m-err').textContent = '请输入用户名和密码'; return; }
+  try{ await api('/api/login',{method:'POST',body:JSON.stringify({name,password:pass})}); hideModal(); await refreshMe(); route(); }
   catch(e){ document.getElementById('m-err').textContent = e.message; }
 }
 function showRegister(){
@@ -761,21 +737,21 @@ function showRegister(){
     '<input type="text" id="m-name" placeholder="用户名（2-16位，中文/字母/数字/下划线）" autocomplete="username">'+
     '<input type="text" id="m-email" placeholder="邮箱（用于验证）" autocomplete="email">'+
     '<input type="password" id="m-pass" placeholder="密码（4位以上）" autocomplete="new-password">'+
-    turnstileDiv()+
     '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">注册即表示同意<a style="color:var(--primary);cursor:pointer" onclick="hideModal();navigate(\'/rules\')">《社区规范》</a></div>'+
     '<div class="row"><button class="btn ghost" onclick="hideModal()">取消</button><button class="btn" onclick="doRegister()">注册</button></div>'+
     (siteSettings.github_oauth ? '<div style="text-align:center;margin:12px 0 4px;color:var(--muted);font-size:12px">— 或 —</div>'+
     '<button class="btn ghost" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px" onclick="location.href=\'/api/auth/github\'">'+
     '<svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>'+
     '使用 GitHub 一键注册</button>' : ''));
-  renderTurnstile('ts-widget');
+  bindEnter(['m-name','m-email','m-pass'], doRegister);
 }
 async function doRegister(){
   const name = document.getElementById('m-name').value.trim();
   const email = document.getElementById('m-email').value.trim();
   const pass = document.getElementById('m-pass').value;
+  if(!name || !email || !pass){ document.getElementById('m-err').textContent = '请填写用户名、邮箱和密码'; return; }
   try{
-    const j = await api('/api/register',{method:'POST',body:JSON.stringify({name,email,password:pass,turnstile_token:getTurnstileToken()})}); resetTurnstile();
+    const j = await api('/api/register',{method:'POST',body:JSON.stringify({name,email,password:pass})});
     hideModal(); await refreshMe();
     if(j.mailSent && me && !me.verified){
       showModal('<h3>验证邮箱</h3><p style="font-size:14px;line-height:1.8;margin-bottom:14px">验证邮件已发送到 <b>'+esc(email)+'</b>，请点击邮件中的链接完成验证。</p>'+
@@ -819,11 +795,8 @@ async function route(){
   if(h === '/dm') return viewDmList();
   if(m = h.match(/^\/dm\/(\d+)/)) return viewDmChat(Number(m[1]));
   if(h === '/admin') return viewAdmin('stats');
-  if(m = h.match(/^\/admin\/(users|boards|site|reports|words|logs|ads|links|shop)/)) return viewAdmin(m[1]);
+  if(m = h.match(/^\/admin\/(users|boards|site|reports|words|logs|ads|links)/)) return viewAdmin(m[1]);
   if(h === '/tools') return viewTools();
-  if(h === '/rankings') return viewRankings();
-  if(h === '/shop') return viewShop();
-  if(m = h.match(/^\/shop\/(\d+)$/)) return viewShopDetail(Number(m[1]));
   if(h === '/tools/diff') return viewDiffTool();
   if(h === '/tools/distro') return viewDistroTool();
   if(h === '/tools/shellcheck') return viewShellcheckTool();
@@ -1005,187 +978,6 @@ function viewRules(){
 /* ---------- 工具中心 ---------- */
 function trackTool(tool){
   api('/api/tool-visit', {method:'POST', body:JSON.stringify({tool})}).catch(()=>{});
-}
-/* ---------- 排行榜 ---------- */
-let rankType = 'points', rankPeriod = 'all';
-function viewRankings(){
-  setTitle('排行榜');
-  const types = [['points','💰 积分榜'],['threads','📝 发帖榜'],['replies','💬 回帖榜'],['activity','🔥 活跃榜']];
-  const periods = [['all','总榜'],['month','月榜'],['week','周榜']];
-  let html = '<div class="crumb" onclick="navigate(\'/\')">‹ 首页</div>'+
-    '<div class="card"><h2 class="tt">🏆 排行榜</h2>'+
-    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'+
-    types.map(t=>'<button class="btn '+(rankType===t[0]?'':'ghost')+'" style="width:auto;padding:8px 14px;font-size:13px" onclick="rankType=\''+t[0]+'\';viewRankings()">'+t[1]+'</button>').join('')+
-    '</div><div style="display:flex;gap:8px;margin-bottom:16px">'+
-    periods.map(p=>'<button class="btn '+(rankPeriod===p[0]?'':'ghost')+'" style="width:auto;padding:6px 12px;font-size:12px" onclick="rankPeriod=\''+p[0]+'\';viewRankings()">'+p[1]+'</button>').join('')+
-    '</div><div id="rank-list"><div class="hint">加载中…</div></div></div>';
-  app.innerHTML = html;
-  api('/api/rankings?type='+rankType+'&period='+rankPeriod).then(j=>{
-    const box = document.getElementById('rank-list');
-    if(!box) return;
-    if(!j.rankings || !j.rankings.length){ box.innerHTML = '<div class="hint">暂无数据</div>'; return; }
-    const medals = ['🥇','🥈','🥉'];
-    const unit = rankType==='points' ? '分' : rankType==='threads' ? '帖' : rankType==='replies' ? '条' : '度';
-    box.innerHTML = j.rankings.map((u,i)=>
-      '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="navigate(\'/u/'+u.id+'\')">'+
-      '<span style="font-size:18px;width:28px;text-align:center">'+(medals[i]||(i+1))+'</span>'+
-      avatarHtml(u.avatar_url, u.name, '')+
-      '<span style="flex:1"><b>'+esc(u.name)+'</b>'+(u.custom_title?' <span style="font-size:11px;color:var(--primary);border:1px solid var(--primary);border-radius:4px;padding:0 4px">'+esc(u.custom_title)+'</span>':'')+'</span>'+
-      '<b style="color:var(--primary)">'+u.score+' '+unit+'</b></div>'
-    ).join('');
-  }).catch(()=>{ const b=document.getElementById('rank-list'); if(b) b.innerHTML='<div class="hint">加载失败</div>'; });
-}
-/* ---------- 积分商城 ---------- */
-function viewShop(){
-  setTitle('积分商城');
-  let html = '<div class="crumb" onclick="navigate(\'/\')">‹ 首页</div>'+
-    '<div class="card"><h2 class="tt">🛒 积分商城</h2>'+
-    '<div style="font-size:13px;color:var(--muted);margin-bottom:16px">用积分兑换专属特权 '+(me?'· 当前 <b style="color:var(--primary)">'+(me.points||0)+' 分</b>':'· <a href="javascript:navigate(\'/login\')" style="color:var(--primary)">登录查看积分</a>')+'</div>'+
-    '<div id="shop-list"><div class="hint">加载中…</div></div></div>'+
-    (me?'<div class="card"><h2 class="tt" style="font-size:16px">🎒 我的物品</h2><div id="my-items"><div class="hint">加载中…</div></div></div>':'');
-  app.innerHTML = html;
-  api('/api/shop/items').then(j=>{
-    const box = document.getElementById('shop-list');
-    if(!box) return;
-    box.innerHTML = '<div style="display:grid;gap:12px">'+j.items.map(it=>{
-      let stockHtml = '';
-      let canBuy = true;
-      if(it.item_type==='card'){
-        stockHtml = '<div style="font-size:12px;color:'+(it.stock>0?'var(--muted)':'#ef4444')+'">库存 '+it.stock+'</div>';
-        if(it.stock<=0) canBuy = false;
-      }
-      let desc = esc(it.descr);
-      if(it.item_type==='pin_card' && it.params && it.params.duration_hours){
-        desc += '（置顶 '+it.params.duration_hours+' 小时）';
-      }
-      return '<div style="display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--border);border-radius:10px;cursor:pointer" onclick="navigate(\'/shop/'+it.id+'\')">'+
-      '<span style="font-size:32px">'+it.icon+'</span>'+
-      '<div style="flex:1"><div style="font-weight:700">'+esc(it.name)+'</div>'+
-      '<div style="font-size:13px;color:var(--muted)">'+desc+'</div>'+stockHtml+'</div>'+
-      '<div style="text-align:center"><div style="font-weight:700;color:var(--primary);margin-bottom:6px">'+it.price+' 分</div>'+
-      '<span style="font-size:13px;color:var(--primary)">查看详情 ›</span></div></div>';
-    }).join('')+'</div>';
-  });
-  if(me){
-    api('/api/shop/my-items').then(j=>{
-      const box = document.getElementById('my-items');
-      if(!box) return;
-      if(!j.items.length){ box.innerHTML = '<div class="hint">还没有物品，去上面兑换吧</div>'; return; }
-      window._myItems = j.items;
-      box.innerHTML = j.items.map(it=>{
-        let extraHtml = '';
-        if(it.item_type==='card' && it.extra){
-          extraHtml = '<div style="font-size:13px;margin-top:4px"><span style="color:var(--muted)">兑换码：</span><code style="background:var(--hover);padding:2px 8px;border-radius:4px;user-select:all">'+esc(it.extra)+'</code> <button class="btn ghost" style="width:auto;padding:2px 8px;font-size:12px" onclick="navigator.clipboard.writeText(\''+esc(it.extra).replace(/'/g,"\\'")+'\').then(()=>alert(\'已复制\'))">复制</button></div>';
-        }
-        const showUse = !it.used && it.item_type!=='card';
-        return '<div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">'+
-        '<span style="font-size:24px">'+it.icon+'</span>'+
-        '<div style="flex:1"><b>'+esc(it.name)+'</b>'+
-        (it.item_type==='card'?'':(it.used?'<span style="font-size:12px;color:var(--muted)"> · 已使用</span>':'<span style="font-size:12px;color:var(--primary)"> · 未使用</span>'))+extraHtml+'</div>'+
-        (showUse?'<button class="btn ghost" style="width:auto;padding:6px 12px;font-size:13px" onclick="useItem('+it.id+',\''+it.item_type+'\')">使用</button>':'')+'</div>';
-      }).join('');
-    });
-  }
-}
-async function viewShopDetail(id){
-  setTitle('商品详情');
-  app.innerHTML = '<div class="hint">加载中…</div>';
-  let item;
-  try{
-    const j = await api('/api/shop/items');
-    item = (j.items || []).find(x => x.id === id);
-  }catch(e){}
-  if(!item){
-    app.innerHTML = '<div class="crumb" onclick="navigate(\'/shop\')">‹ 积分商城</div><div class="card"><div class="hint">商品不存在或已下架</div></div>';
-    return;
-  }
-  setTitle(item.name);
-  const typeDesc = {
-    pin_card: '📌 置顶卡：使用后选择自己的一篇帖子置顶，让更多人看到。',
-    rename_card: '✏️ 改名卡：使用后可修改一次用户名，30 天内限用 1 次。',
-    avatar_frame: '🖼️ 头像框：使用后获得金色头像框，全站展示。',
-    custom_title: '👑 自定义头衔：使用后可设置专属头衔（最多20字），显示在名字旁边。',
-    card: '🎟️ 卡密商品：兑换后系统自动分配一个兑换码，请妥善保管。'
-  };
-  // 优先显示后台填写的使用说明，没有才用默认
-  const usageHtml = item.usage
-    ? '<div style="font-size:14px;line-height:1.8;color:var(--text);white-space:pre-wrap">'+esc(item.usage)+'</div>'
-    : '<div style="font-size:14px;line-height:1.8;color:var(--text)">'+(typeDesc[item.item_type] || '兑换后在"我的物品"中查看使用。')+'</div>';
-  let extraInfo = '';
-  if(item.item_type === 'pin_card' && item.params && item.params.duration_hours){
-    extraInfo = '<div class="setrow"><label>置顶时长</label><div>'+item.params.duration_hours+' 小时</div></div>';
-  }
-  if(item.item_type === 'card'){
-    extraInfo = '<div class="setrow"><label>库存</label><div style="color:'+(item.stock>0?'var(--primary)':'#ef4444')+'">'+(item.stock>0 ? '剩余 '+item.stock+' 件' : '已售罄')+'</div></div>';
-  }
-  const canBuy = me && (item.item_type !== 'card' || item.stock > 0);
-  let html = '<div class="crumb" onclick="navigate(\'/shop\')">‹ 积分商城</div>'+
-    '<div class="card" style="text-align:center;padding:32px 20px">'+
-    '<div style="font-size:64px;margin-bottom:12px">'+item.icon+'</div>'+
-    '<div style="font-size:24px;font-weight:800;margin-bottom:8px">'+esc(item.name)+'</div>'+
-    (item.descr ? '<div style="font-size:14px;color:var(--muted);margin-bottom:16px">'+esc(item.descr)+'</div>' : '')+
-    '<div style="font-size:28px;font-weight:800;color:var(--primary);margin-bottom:20px">'+item.price+' <span style="font-size:14px">积分</span></div>'+
-    (me ? '<div style="font-size:13px;color:var(--muted);margin-bottom:16px">当前积分：<b style="color:var(--primary)">'+(me.points||0)+'</b></div>' : '<div style="font-size:13px;color:var(--muted);margin-bottom:16px"><a href="javascript:showLogin()" style="color:var(--primary)">登录</a>后兑换</div>')+
-    (canBuy ? '<button class="btn" style="width:auto;padding:12px 48px;font-size:16px" onclick="buyItem('+item.id+','+item.price+')">立即兑换</button>'
-      : (me ? '<button class="btn" disabled style="width:auto;padding:12px 48px;font-size:16px;opacity:.5">已售罄</button>' : ''))+
-    '</div>'+
-    '<div class="card"><h3 style="margin-bottom:12px">📖 使用说明</h3>'+
-    usageHtml+extraInfo+'</div>';
-  app.innerHTML = html;
-}
-async function buyItem(id, price){
-  if(!confirm('确定花 '+price+' 积分兑换吗？')) return;
-  try{
-    const j = await api('/api/shop/buy', {method:'POST', body:JSON.stringify({item_id:id})});
-    if(j.ok){
-      if(j.code){ alert('兑换成功！\n\n你的兑换码：'+j.code+'\n\n已保存到"我的物品"，请妥善保管。'); }
-      else alert('兑换成功！');
-      viewShop(); refreshMe();
-    }
-  }catch(e){ alert(e.message); }
-}
-async function useItem(id, type){
-  let extra = '', thread_id = null;
-  // 从缓存取商品 params（置顶时长）
-  const _it = (window._myItems || []).find(x => x.id === id);
-  let _hours = 24;
-  try{ const p = JSON.parse((_it && _it.params) || '{}'); if(p.duration_hours) _hours = p.duration_hours; }catch(e){}
-  if(type==='rename_card'){
-    extra = prompt('请输入新用户名：');
-    if(!extra) return;
-  }else if(type==='custom_title'){
-    extra = prompt('请输入自定义头衔（最多20字）：');
-    if(!extra) return;
-  }else if(type==='pin_card'){
-    // 拉取我的帖子列表来选
-    try{
-      const j = await api('/api/users/'+me.id);
-      if(!j.threads.length){ alert('你还没有发过帖子'); return; }
-      let html = '<h3>选择要置顶的帖子（'+_hours+'小时）</h3>';
-      j.threads.slice(0,10).forEach(t=>{
-        html += '<div class="thread" style="margin:8px 0" onclick="doPinCard('+id+','+t.id+','+_hours+')"><div class="ti">'+esc(t.title)+'</div><div class="mt"><span>'+esc(t.board_name)+'</span></div></div>';
-      });
-      showModal(html);
-      return;
-    }catch(e){ alert('加载帖子失败'); return; }
-  }else if(type==='avatar_frame'){
-    if(!confirm('确定使用头像框吗？')) return;
-  }
-  try{
-    const body = {user_item_id:id};
-    if(extra) body.extra = extra;
-    if(thread_id) body.thread_id = thread_id;
-    const j = await api('/api/shop/use', {method:'POST', body:JSON.stringify(body)});
-    if(j.ok){ alert('使用成功！'); await refreshMe(); viewShop(); }
-  }catch(e){ alert(e.message); }
-}
-async function doPinCard(itemId, threadId, hours){
-  hideModal();
-  if(!confirm('确定置顶这个帖子 '+(hours||24)+' 小时吗？')) return;
-  try{
-    const j = await api('/api/shop/use', {method:'POST', body:JSON.stringify({user_item_id:itemId, thread_id:threadId})});
-    if(j.ok){ alert('置顶成功！'); viewShop(); }
-  }catch(e){ alert(e.message); }
 }
 async function transferPoints(uid, name){
   const amount = prompt('转增积分给 '+name+'（单次最多 1000 分）：');
@@ -1396,7 +1188,7 @@ function quizResult(){
   '</div>'+
   '<div style="margin-top:16px;font-size:13px;color:var(--muted)">🔗 <span style="cursor:pointer;color:var(--primary);word-break:break-all" onclick="navigator.clipboard.writeText(\''+shareUrl+'\');alert(\'链接已复制\')">'+shareUrl+'</span></div>'+
   '<div id="quiz-claim" style="margin-top:16px"></div>'+
-  '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);font-size:14px">🐧 想和同段位的人交流？<br><span style="cursor:pointer;color:var(--primary);font-weight:700" onclick="navigate(\'/register\')">加入企鹅窝 →</span></div>'+
+  '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);font-size:14px">🐧 想和同段位的人交流？<br><span style="cursor:pointer;color:var(--primary);font-weight:700" onclick="showRegister()">加入企鹅窝 →</span></div>'+
   '</div>';
   app.innerHTML = html;
   window.scrollTo(0, 0);
@@ -1411,7 +1203,7 @@ function quizResult(){
       else if(j.ok && j.already) claimBox.innerHTML = '<div style="font-size:13px;color:var(--muted)">已领取过测试积分（最高分 ' + s.score + ' 分）</div>';
     }).catch(()=>{});
   }else{
-    claimBox.innerHTML = '<div style="background:var(--hl);border-radius:8px;padding:12px;font-size:14px;cursor:pointer" onclick="navigate(\'/login\')">🔑 <b>登录领取积分</b>：首次完成测试可得 5–15 积分 →</div>';
+    claimBox.innerHTML = '<div style="background:var(--hl);border-radius:8px;padding:12px;font-size:14px;cursor:pointer" onclick="showLogin()">🔑 <b>登录领取积分</b>：首次完成测试可得 5–15 积分 →</div>';
   }
 }
 function parseCommand(input){
@@ -1619,7 +1411,6 @@ async function viewAdmin(tab){
     '<button class="'+(tab==='words'?'on':'')+'" onclick="navigate(\'/admin/words\')">🔞 敏感词</button>'+
     '<button class="'+(tab==='ads'?'on':'')+'" onclick="navigate(\'/admin/ads\')">📢 广告</button>'+
     '<button class="'+(tab==='links'?'on':'')+'" onclick="navigate(\'/admin/links\')">🔗 友链</button>'+
-    '<button class="'+(tab==='shop'?'on':'')+'" onclick="navigate(\'/admin/shop\')">🛒 商品</button>'+
     '<button class="'+(tab==='site'?'on':'')+'" onclick="navigate(\'/admin/site\')">⚙️ 站点</button>'+
     '<button class="'+(tab==='logs'?'on':'')+'" onclick="navigate(\'/admin/logs\')">📝 日志</button></div>';
   let html = '<div class="crumb" onclick="navigate(\'/\')">‹ 全部版块</div><h2 class="tt" style="margin-bottom:12px">管理后台</h2>' + tabs;
@@ -1752,38 +1543,6 @@ async function viewAdmin(tab){
       });
       if(!j.links.length) html += '<div class="hint">暂无友链</div>';
       html += '</div>';
-    }else if(tab === 'shop'){
-      const j = await api('/api/admin/shop/items');
-      window._shopItems = j.items;
-      const typeName = {pin_card:'📌 置顶卡', rename_card:'✏️ 改名卡', avatar_frame:'🖼️ 头像框', custom_title:'👑 自定义头衔', card:'🎟️ 卡密'};
-      html += '<div class="card"><h3 style="margin-bottom:12px" id="si-form-title">上架商品</h3>'+
-        '<div class="setrow"><label>名称</label><input type="text" id="si-name" placeholder="如：置顶卡"></div>'+
-        '<div class="setrow"><label>图标</label><input type="text" id="si-icon" placeholder="📌" style="width:80px"></div>'+
-        '<div class="setrow"><label>价格（积分）</label><input type="number" id="si-price" placeholder="100" style="width:120px"></div>'+
-        '<div class="setrow"><label>类型</label><select id="si-type" onchange="shopTypeChange()">'+
-          '<option value="pin_card">📌 置顶卡</option><option value="rename_card">✏️ 改名卡（30天限1次）</option>'+
-          '<option value="avatar_frame">🖼️ 头像框</option><option value="custom_title">👑 自定义头衔</option>'+
-          '<option value="card">🎟️ 卡密（兑换码）</option></select></div>'+
-        '<div class="setrow" id="si-duration-row"><label>置顶时长（小时）</label><input type="number" id="si-duration" value="24" style="width:100px" placeholder="24"></div>'+
-        '<div class="setrow" id="si-codes-row" style="display:none"><label>兑换码（每行一个）</label><textarea id="si-codes" style="min-height:80px" placeholder="CODE001&#10;CODE002&#10;每行一个兑换码"></textarea></div>'+
-        '<div class="setrow"><label>简介（列表页显示）</label><input type="text" id="si-descr" placeholder="一句话描述，显示在商品列表"></div>'+
-        '<div class="setrow"><label>使用说明（详情页显示）</label><textarea id="si-usage" style="min-height:60px" placeholder="详细说明这个商品是干嘛的、怎么用，支持换行"></textarea></div>'+
-        '<div class="setrow"><label>排序</label><input type="number" id="si-sort" value="99" style="width:80px"></div>'+
-        '<div style="display:flex;gap:8px"><button class="btn" id="si-submit" onclick="adminAddShopItem()">上架</button>'+
-        '<button class="btn ghost" id="si-cancel" style="display:none" onclick="adminCancelEditShop()">取消</button></div></div>';
-      html += '<div class="card">';
-      j.items.forEach(it=>{
-        let stockInfo = '';
-        if(it.item_type==='card' && it.stock !== undefined) stockInfo = ' <span style="color:'+(it.stock>0?'var(--primary)':'#ef4444')+'">[库存 '+it.stock+']</span>';
-        html += '<div class="urow"><div class="info"><div class="nm">'+esc(it.icon)+' '+esc(it.name)+
-          ' <span style="color:var(--primary)">'+it.price+'积分</span>'+stockInfo+'</div>'+
-          '<div class="em">'+(typeName[it.item_type]||it.item_type)+(it.descr?' · '+esc(it.descr):'')+'</div></div><div class="abtns">'+
-          '<button onclick="adminEditShopItem('+it.id+')">编辑</button>'+
-          (it.item_type==='card' ? '<button onclick="adminAddCodes('+it.id+')">补货</button>' : '')+
-          '<button class="danger" onclick="adminDelShopItem('+it.id+')">删除</button></div></div>';
-      });
-      if(!j.items.length) html += '<div class="hint">暂无商品</div>';
-      html += '</div>';
     }else if(tab === 'site'){
       const s = siteSettings;
       html += '<div class="card">'+
@@ -1856,96 +1615,6 @@ async function adminAddLink(){
 async function adminDelLink(id){
   if(!confirm('删除这个友链？')) return;
   try{ await api('/api/admin/friend-links/'+id, {method:'DELETE'}); route(); }
-  catch(e){ alert(e.message); }
-}
-let _shopEditId = 0;
-function shopTypeChange(){
-  const t = document.getElementById('si-type').value;
-  document.getElementById('si-duration-row').style.display = t==='pin_card' ? '' : 'none';
-  document.getElementById('si-codes-row').style.display = (t==='card' && !_shopEditId) ? '' : 'none';
-}
-function adminEditShopItem(id){
-  const it = (window._shopItems || []).find(x => x.id === id);
-  if(!it) return;
-  _shopEditId = id;
-  document.getElementById('si-name').value = it.name || '';
-  document.getElementById('si-icon').value = it.icon || '';
-  document.getElementById('si-price').value = it.price || '';
-  document.getElementById('si-type').value = it.item_type;
-  document.getElementById('si-type').disabled = true;
-  document.getElementById('si-descr').value = it.descr || '';
-  document.getElementById('si-usage').value = it.usage || '';
-  document.getElementById('si-sort').value = it.sort || 99;
-  try{
-    const p = JSON.parse(it.params || '{}');
-    if(p.duration_hours) document.getElementById('si-duration').value = p.duration_hours;
-  }catch(e){}
-  shopTypeChange();
-  document.getElementById('si-form-title').textContent = '编辑商品';
-  document.getElementById('si-submit').textContent = '保存修改';
-  document.getElementById('si-cancel').style.display = '';
-  window.scrollTo({top: 0, behavior: 'smooth'});
-}
-function adminCancelEditShop(){
-  _shopEditId = 0;
-  document.getElementById('si-name').value = '';
-  document.getElementById('si-icon').value = '';
-  document.getElementById('si-price').value = '';
-  document.getElementById('si-type').value = 'pin_card';
-  document.getElementById('si-type').disabled = false;
-  document.getElementById('si-descr').value = '';
-  document.getElementById('si-usage').value = '';
-  document.getElementById('si-sort').value = 99;
-  document.getElementById('si-duration').value = 24;
-  document.getElementById('si-codes').value = '';
-  shopTypeChange();
-  document.getElementById('si-form-title').textContent = '上架商品';
-  document.getElementById('si-submit').textContent = '上架';
-  document.getElementById('si-cancel').style.display = 'none';
-}
-async function adminAddShopItem(){
-  const name = document.getElementById('si-name').value.trim();
-  const icon = document.getElementById('si-icon').value.trim() || '🎁';
-  const price = parseInt(document.getElementById('si-price').value) || 0;
-  const item_type = document.getElementById('si-type').value;
-  const descr = document.getElementById('si-descr').value.trim();
-  const usage = document.getElementById('si-usage').value.trim();
-  const sort = parseInt(document.getElementById('si-sort').value) || 99;
-  if(!name || !price){ alert('名称和价格必填'); return; }
-  const params = {};
-  if(item_type==='pin_card'){
-    params.duration_hours = parseInt(document.getElementById('si-duration').value) || 24;
-  }
-  // 编辑模式
-  if(_shopEditId){
-    try{
-      await api('/api/admin/shop/items/'+_shopEditId, {method:'PUT', body:JSON.stringify({name, icon, price, descr, usage, sort, params})});
-      route();
-    }catch(e){ alert(e.message); }
-    return;
-  }
-  let codes = [];
-  if(item_type==='card'){
-    codes = document.getElementById('si-codes').value.split('\n').map(s=>s.trim()).filter(Boolean);
-    if(!codes.length){ alert('卡密商品请填写兑换码，每行一个'); return; }
-  }
-  try{ await api('/api/admin/shop/items', {method:'POST', body:JSON.stringify({name, icon, price, item_type, descr, usage, sort, params, codes})}); route(); }
-  catch(e){ alert(e.message); }
-}
-async function adminAddCodes(id){
-  const input = prompt('粘贴兑换码，每行一个：');
-  if(!input) return;
-  const codes = input.split('\n').map(s=>s.trim()).filter(Boolean);
-  if(!codes.length) return;
-  try{
-    const j = await api('/api/admin/shop/items/'+id+'/codes', {method:'POST', body:JSON.stringify({codes})});
-    alert('补货成功，新增 '+j.added+' 个');
-    route();
-  }catch(e){ alert(e.message); }
-}
-async function adminDelShopItem(id){
-  if(!confirm('删除这个商品？已购买的用户不受影响。')) return;
-  try{ await api('/api/admin/shop/items/'+id, {method:'DELETE'}); route(); }
   catch(e){ alert(e.message); }
 }
 function adminEditBoard(bid, name, descr, sort){
